@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Forms</title>
+</head>
+<body>
+  <h1>My Forms</h1>
+  <button onclick="createForm()">Create New Form</button>
+  <h2>Recent Forms</h2>
+  <ul id="formsList"></ul>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Morate biti prijavljeni!');
+      window.location.href = 'index.html';
+    }
+
+    async function loadForms() {
+      const res = await fetch('http://localhost:3002/my-forms', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = await res.json();
+
+      const list = document.getElementById('formsList');
+      list.innerHTML = '';
+
+      if (data.length === 0) {
+        list.innerHTML = '<li>No forms yet.</li>';
+        return;
+      }
+
+      data.forEach(form => {
+        const li = document.createElement('li');
+        li.innerText = form.title + (form.description ? ' - ' + form.description : '');
+        list.appendChild(li);
+      });
+    }
+
+    function createForm() {
+      window.location.href = 'create_form.html';
+    }
+
+    loadForms();
+  </script>
+</body>
+</html>

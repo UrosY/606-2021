@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Kreiraj formu</title>
+</head>
+<body>
+  <h1>Kreiraj novu formu</h1>
+
+  <label>Naziv forme:</label>
+  <input type="text" id="formTitle"><br><br>
+
+  <label>Opis:</label>
+  <textarea id="formDesc"></textarea><br><br>
+
+  <h2>Pitanja</h2>
+  <div id="questions"></div>
+  <button onclick="addQuestion()">➕ Dodaj pitanje</button><br><br>
+
+  <button onclick="saveForm()">💾 Sačuvaj formu</button>
+
+  <script>
+    let questionCount = 0;
+
+    function addQuestion() {
+      questionCount++;
+      const qDiv = document.createElement('div');
+      qDiv.className = "question";
+      qDiv.innerHTML = `
+        <h3>Pitanje ${questionCount}</h3>
+        <input type="text" placeholder="Tekst pitanja" class="qText"><br>
+        <label>Tip:</label>
+        <select class="qType" onchange="toggleOptions(this)">
+          <option value="short_text">Kratak tekst</option>
+          <option value="long_text">Dug tekst</option>
+          <option value="single_choice">Jedan izbor</option>
+          <option value="multiple_choice">Više izbora</option>
+        </select>
+        <div class="options" style="display:none;"></div>
+        <button type="button" onclick="addOption(this)">➕ Dodaj opciju</button>
+        <br>
+        <label><input type="checkbox" class="qRequired"> Obavezno</label>
+        <hr>
+      `;
+      document.getElementById('questions').appendChild(qDiv);
+    }
+
+    function toggleOptions(select) {
+      const optionsDiv = select.parentNode.querySelector('.options');
+      if (select.value === 'single_choice' || select.value === 'multiple_choice') {
+        optionsDiv.style.display = 'block';
+      } else {
+        optionsDiv.innerHTML = '';
+        optionsDiv.style.display = 'none';
+      }
+    }
+
+    function addOption(btn) {
+      const optionsDiv = btn.parentNode.querySelector('.options');
+      const opt = document.createElement('input');
+      opt.type = 'text';
+      opt.placeholder = 'Opcija';
+      optionsDiv.appendChild(opt);
+      optionsDiv.appendChild(document.createElement('br'));
+    }
+
+    async function saveForm() {
+      const token = localStorage.getItem('token');
+      const formTitle = document.getElementById('formTitle').value.trim();
+      const formDesc = document.getElementById('formDesc').value.trim();
+
+      const questions = [];
+      document.querySelectorAll('.question').forEach(q => {
+        const text = q.querySelector('.qText').value.trim();
+        const type = q.querySelector('.qType').value;
+        const required = q.querySelector('.qRequired').checked;
+
+        let options = [];
+        q.querySelectorAll('.options input').forEach(opt => {
+          if (opt.value.trim() !== '') options.push(opt.value.trim());
+        });
+
+        if (text !== '') {
+          questions.push({ text, type, required, options });
+        }
+      });
+
+      const res = await fetch('http://localhost:3002/create-form', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ title: formTitle, description: formDesc, allowGuests: false, questions })
+      });
+
+      const data = await res.json();
+
+      // **Samo alert sa porukom**
+      res.json({ message: 'Forma je uspešno kreirana!' });
+      // Preusmeri odmah na forms.html
+      window.location.href = 'forms.html';
+    }
+  </script>
+</body>
+</html>
