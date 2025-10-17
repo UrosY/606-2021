@@ -1,13 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
   <meta charset="UTF-8">
-  <title>My Forms</title>
+  <title>Moje forme</title>
+  <style>
+    body { font-family: sans-serif; }
+    li { margin-bottom: 10px; }
+    button { margin-left: 10px; }
+  </style>
 </head>
 <body>
-  <h1>My Forms</h1>
-  <button onclick="createForm()">Create New Form</button>
-  <h2>Recent Forms</h2>
+  <h1>Moje forme</h1>
+  <button onclick="createForm()">Kreiraj novu formu</button>
+
+  <h2>Moje forme</h2>
   <ul id="formsList"></ul>
 
   <script>
@@ -18,28 +24,95 @@
     }
 
     async function loadForms() {
-      const res = await fetch('http://localhost:3002/my-forms', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      const data = await res.json();
+      try {
+        const res = await fetch('http://localhost:3002/my-forms', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
 
-      const list = document.getElementById('formsList');
-      list.innerHTML = '';
+        if (!res.ok) {
+          const err = await res.json();
+          console.error('Greška pri učitavanju formi:', err);
+          document.getElementById('formsList').innerHTML = '<li>Greška pri učitavanju formi. Pogledajte konzolu.</li>';
+          return;
+        }
 
-      if (data.length === 0) {
-        list.innerHTML = '<li>No forms yet.</li>';
-        return;
+        const data = await res.json();
+        const list = document.getElementById('formsList');
+        list.innerHTML = '';
+
+        if (!Array.isArray(data) || data.length === 0) {
+          list.innerHTML = '<li>Još uvek nemate formi.</li>';
+          return;
+        }
+
+        data.forEach(form => {
+          const li = document.createElement('li');
+
+          
+          const fillLink = document.createElement('a');
+          fillLink.href = `fill_form.html?id=${form.id}`;
+          fillLink.textContent = form.title;
+          li.appendChild(fillLink);
+
+          if (form.description) {
+            const desc = document.createElement('span');
+            desc.textContent = ' - ' + form.description;
+            li.appendChild(desc);
+          }
+
+          
+          const collabBtn = document.createElement('button');
+          collabBtn.textContent = "Dodaj kolaboratora";
+          collabBtn.onclick = () => addCollaborator(form.id);
+          li.appendChild(collabBtn);
+
+          list.appendChild(li);
+        });
+
+      } catch (err) {
+        console.error('Fetch error pri učitavanju formi:', err);
+        document.getElementById('formsList').innerHTML = '<li>Greška pri učitavanju formi. Pogledajte konzolu.</li>';
       }
-
-      data.forEach(form => {
-        const li = document.createElement('li');
-        li.innerText = form.title + (form.description ? ' - ' + form.description : '');
-        list.appendChild(li);
-      });
     }
 
     function createForm() {
       window.location.href = 'create_form.html';
+    }
+
+    async function addCollaborator(formId) {
+      const email = prompt("Unesite email kolaboratora:");
+      if (!email) return;
+
+      const role = prompt("Uloga (editor/viewer):");
+      if (!role || !["editor","viewer"].includes(role)) {
+        alert("Uloga mora biti 'editor' ili 'viewer'.");
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3002/forms/${formId}/collaborators`, {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ email, role })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          console.error('Greška pri dodavanju kolaboratora:', errData);
+          alert(`Neuspešno dodavanje kolaboratora: ${errData.message || JSON.stringify(errData)}`);
+          return;
+        }
+
+        const data = await res.json();
+        alert(`Kolaborator dodat: ${data.message}`);
+
+      } catch (err) {
+        console.error('Fetch error pri dodavanju kolaboratora:', err);
+        alert('Greška pri dodavanju kolaboratora. Pogledajte konzolu za detalje.');
+      }
     }
 
     loadForms();
