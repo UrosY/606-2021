@@ -1,0 +1,15 @@
+{
+  "name": "forms-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend:auth": "cd backend/auth-service && node server.js",
+    "dev:backend:forms": "cd backend/forms-service && node server.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm:dev:backend:auth\" \"npm:dev:backend:forms\" \"npm:dev:frontend\"",
+    "install:all": "cd backend/auth-service && npm install && cd ../forms-service && npm install && cd ../../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
