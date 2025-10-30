@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Forme</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    h1 { margin-bottom: 10px; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin: 10px 0; }
+    a { text-decoration: none; color: blue; }
+  </style>
+</head>
+<body>
+  <h1>Forme dostupne neprijavljenim korisnicima</h1>
+  <ul id="formsList"></ul>
+
+  <script>
+    async function loadPublicForms() {
+      try {
+        const res = await fetch('http://localhost:3002/public-forms');
+        const data = await res.json();
+
+        const list = document.getElementById('formsList');
+        list.innerHTML = '';
+
+        if (!Array.isArray(data) || data.length === 0) {
+          list.innerHTML = '<li>Nema dostupnih formi.</li>';
+          return;
+        }
+
+        data.forEach(form => {
+          const li = document.createElement('li');
+          const link = document.createElement('a');
+          link.href = `fill_form.html?id=${form.id}`;
+          link.textContent = form.title;
+          li.appendChild(link);
+          list.appendChild(li);
+        });
+      } catch (err) {
+        console.error('Greška pri učitavanju formi:', err);
+        document.getElementById('formsList').innerHTML = '<li>Greška pri učitavanju formi.</li>';
+      }
+    }
+
+    loadPublicForms();
+  </script>
+</body>
+</html>

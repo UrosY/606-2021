@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Popuni formu</title>
+</head>
+<body>
+  <h1 id="formTitle">Učitavanje...</h1>
+  <p id="formDesc"></p>
+  <div id="questions"></div>
+  <button id="submitBtn">Pošalji odgovore</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+
+    function getParam(name) {
+      const params = new URLSearchParams(location.search);
+      return params.get(name);
+    }
+
+    async function loadForm() {
+      const id = getParam('id');
+      if (!id) {
+        alert('ID forme nije prosleđen.');
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:3002/form/' + id, {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Greška: ' + (err.message || JSON.stringify(err)));
+          return;
+        }
+        const data = await res.json();
+        const { form, questions } = data;
+
+        document.getElementById('formTitle').textContent = form.title;
+        document.getElementById('formDesc').textContent = form.description || '';
+
+        const qContainer = document.getElementById('questions');
+        qContainer.innerHTML = '';
+
+        questions.forEach(q => {
+          const div = document.createElement('div');
+          div.className = 'question-block';
+          div.dataset.qid = q.id;
+          div.dataset.qtype = q.type;
+
+          const label = document.createElement('label');
+          label.innerHTML = `<strong>${q.text}</strong> ${q.is_required ? '<span style="color:red">*</span>' : ''}`;
+          div.appendChild(label);
+          div.appendChild(document.createElement('br'));
+
+          
+          if (q.type === 'short_text') {
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.dataset.type = 'short_text';
+            div.appendChild(inp);
+          } else if (q.type === 'long_text') {
+            const ta = document.createElement('textarea');
+            ta.dataset.type = 'long_text';
+            div.appendChild(ta);
+          } else if (q.type === 'single_choice') {
+            q.options.forEach(opt => {
+              const r = document.createElement('div');
+              r.innerHTML = `<label><input type="radio" name="q_${q.id}" value="${opt.id}"> ${opt.text}</label>`;
+              div.appendChild(r);
+            });
+          } else if (q.type === 'multiple_choice') {
+            q.options.forEach(opt => {
+              const c = document.createElement('div');
+              c.innerHTML = `<label><input type="checkbox" name="q_${q.id}" value="${opt.id}"> ${opt.text}</label>`;
+              div.appendChild(c);
+            });
+          } else if (q.type === 'numeric') {
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.dataset.type = 'numeric';
+            div.appendChild(inp);
+          } else if (q.type === 'date') {
+            const inp = document.createElement('input');
+            inp.type = 'date';
+            div.appendChild(inp);
+          } else if (q.type === 'time') {
+            const inp = document.createElement('input');
+            inp.type = 'time';
+            div.appendChild(inp);
+          }
+
+          qContainer.appendChild(div);
+          qContainer.appendChild(document.createElement('hr'));
+        });
+
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri učitavanju forme.');
+      }
+    }
+
+    async function submitAnswers() {
+      const id = getParam('id');
+      if (!id) return alert('ID missing');
+
+      const blocks = document.querySelectorAll('.question-block');
+      const answers = [];
+
+      for (let b of blocks) {
+        const qid = parseInt(b.dataset.qid);
+        const qtype = b.dataset.qtype;
+
+        if (qtype === 'short_text' || qtype === 'long_text' || qtype === 'numeric' || qtype === 'date' || qtype === 'time') {
+          const input = b.querySelector('input, textarea');
+          const val = input ? input.value : null;
+          answers.push({ questionId: qid, type: qtype, value: val });
+        } else if (qtype === 'single_choice') {
+          const sel = b.querySelector('input[type="radio"]:checked');
+          const selectedOptionId = sel ? parseInt(sel.value) : null;
+          answers.push({ questionId: qid, type: qtype, selectedOptionId });
+        } else if (qtype === 'multiple_choice') {
+          const checked = Array.from(b.querySelectorAll('input[type="checkbox"]:checked')).map(i => parseInt(i.value));
+          answers.push({ questionId: qid, type: qtype, selectedOptionIds: checked });
+        }
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3002/form/${id}/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({ answers })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert('Hvala — odgovori su poslati.');
+          window.location.href = 'forms.html';
+        } else {
+          alert('Greška: ' + (data.error || data.message || JSON.stringify(data)));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Greška pri slanju odgovora.');
+      }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', submitAnswers);
+    loadForm();
+  </script>
+</body>
+</html>

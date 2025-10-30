@@ -48,7 +48,7 @@
         data.forEach(form => {
           const li = document.createElement('li');
 
-          
+          // link za popunjavanje forme
           const fillLink = document.createElement('a');
           fillLink.href = `fill_form.html?id=${form.id}`;
           fillLink.textContent = form.title;
@@ -72,6 +72,29 @@
           editBtn.onclick = () => editForm(form.id);
           li.appendChild(editBtn);
 
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = "Ukloni";
+          deleteBtn.onclick = () => deleteForm(form.id);
+          li.appendChild(deleteBtn);
+
+         
+          const resultsBtn = document.createElement('button');
+          resultsBtn.textContent = "Rezultati";
+          resultsBtn.onclick = () => viewResults(form.id);
+          li.appendChild(resultsBtn);
+
+          
+          const shareBtn = document.createElement('button');
+          shareBtn.textContent = "Podeli formu";
+          shareBtn.onclick = () => {
+            const shareUrl = `${window.location.origin}/frontend/fill_form.html?id=${form.id}`;
+            navigator.clipboard.writeText(shareUrl)
+              .then(() => alert(`Link za popunjavanje forme je kopiran:\n${shareUrl}`))
+              .catch(() => alert(`Link za popunjavanje forme:\n${shareUrl}`));
+          };
+          li.appendChild(shareBtn);
+
           list.appendChild(li);
         });
 
@@ -81,9 +104,7 @@
       }
     }
 
-    function createForm() {
-      window.location.href = 'create_form.html';
-    }
+    function createForm() { window.location.href = 'create_form.html'; }
 
     async function addCollaborator(formId) {
       const email = prompt("Unesite email kolaboratora:");
@@ -98,10 +119,7 @@
       try {
         const res = await fetch(`http://localhost:3002/forms/${formId}/collaborators`, {
           method: "POST",
-          headers: {
-            "Authorization": "Bearer " + token,
-            "Content-Type": "application/json"
-          },
+          headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
           body: JSON.stringify({ email, role })
         });
 
@@ -121,8 +139,36 @@
       }
     }
 
-    function editForm(formId) {
-      window.location.href = `edit_form.html?id=${formId}`;
+    function editForm(formId) { window.location.href = `edit_form.html?id=${formId}`; }
+
+    async function deleteForm(formId) {
+      const potvrda = confirm("Da li ste sigurni da želite da obrišete ovu formu i sva njena pitanja?");
+      if (!potvrda) return;
+
+      try {
+        const res = await fetch(`http://localhost:3002/forms/${formId}`, {
+          method: "DELETE",
+          headers: { "Authorization": "Bearer " + token }
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          console.error('Greška pri brisanju forme:', errData);
+          alert(`Neuspešno brisanje forme: ${errData.message || JSON.stringify(errData)}`);
+          return;
+        }
+
+        alert("Forma uspešno obrisana.");
+        loadForms();
+
+      } catch (err) {
+        console.error('Fetch error pri brisanju forme:', err);
+        alert('Greška pri brisanju forme. Pogledajte konzolu.');
+      }
+    }
+
+    function viewResults(formId) {
+      window.location.href = `results.html?id=${formId}`;
     }
 
     loadForms();

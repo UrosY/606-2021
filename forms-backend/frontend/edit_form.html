@@ -44,7 +44,7 @@ async function loadForm() {
   } catch(err) { console.error(err); alert('Greška pri učitavanju forme'); }
 }
 
-// Dodavanje pitanja
+
 function addQuestion(existing=null){
   const qDiv=document.createElement('div'); qDiv.className='question';
   const qText = existing ? existing.text : '';
@@ -126,7 +126,7 @@ async function saveChanges(){
     const data = await res.json();
     if(res.ok){
       alert(data.message || 'Forma uspešno izmenjena!');
-      window.location.href = 'forms.html'; 
+      window.location.href = 'forms.html'; // **redirect na listu formi**
     } else alert('Greška pri čuvanju: '+(data.error||JSON.stringify(data)));
 
   } catch(err){

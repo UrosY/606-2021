@@ -2,23 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Auth Test</title>
+  <title>Forme</title>
 </head>
 <body>
-  <h1>Auth Test</h1>
+  <h1>Forme</h1>
 
   
-  <h2>Register</h2>
+  <h2>Registracija</h2>
   <input type="text" id="regName" placeholder="Name">
   <input type="email" id="regEmail" placeholder="Email">
   <input type="password" id="regPassword" placeholder="Password">
-  <button onclick="register()">Register</button>
+  <button onclick="register()">Registruj se</button>
 
   
-  <h2>Login</h2>
+  <h2>Prijava</h2>
   <input type="email" id="loginEmail" placeholder="Email">
   <input type="password" id="loginPassword" placeholder="Password">
-  <button onclick="login()">Login</button>
+  <button onclick="login()">Prijavi se</button>
+
+  <hr>
+
+  
+  <button onclick="enterAsGuest()">Uđi neprijavljen</button>
 
   <script>
     async function register() {
@@ -60,6 +65,11 @@
       } else if (data.error) {
         alert('Greška: ' + data.error);
       }
+    }
+
+    function enterAsGuest() {
+      
+      window.location.href = 'public_forms.html';
     }
   </script>
 </body>

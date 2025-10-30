@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Moji rezultati</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+    button { padding: 5px 10px; cursor: pointer; margin-right: 5px; }
+    .back-button { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Rezultati forme</h1>
+  <button onclick="window.location.href='grouped_results.html'">Grupni odgovori</button>
+  <div id="results"></div>
+  
+  <button class="back-button" onclick="window.history.back()">Nazad</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+
+    
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    const formId = getQueryParam('id');
+    if (!formId) {
+      document.getElementById('results').innerHTML = '<p>Nije prosleđena forma.</p>';
+    } else {
+      fetchResults(formId);
+    }
+
+    async function fetchResults(formId) {
+      try {
+        const res = await fetch('http://localhost:3002/my-results', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!res.ok) throw new Error('Greška pri učitavanju rezultata');
+
+        const data = await res.json();
+      
+        const form = data.find(f => f.form_id == formId);
+        if (!form) {
+          document.getElementById('results').innerHTML = '<p>Forma nema rezultate ili ne postoji.</p>';
+          return;
+        }
+
+        renderResults([form]);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('results').innerHTML = '<p>Greška pri učitavanju rezultata. Pogledajte konzolu.</p>';
+      }
+    }
+
+    function renderResults(forms) {
+      const container = document.getElementById('results');
+      container.innerHTML = '';
+
+      forms.forEach(form => {
+        const table = document.createElement('table');
+        const header = document.createElement('tr');
+        header.innerHTML = `
+          <th>Forma</th>
+          <th>Korisnik</th>
+          <th>Email</th>
+          <th>Vreme slanja</th>
+          <th>Akcija</th>
+        `;
+        table.appendChild(header);
+
+        form.responses.forEach(resp => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${form.title}</td>
+            <td>${resp.user_name || 'Anoniman'}</td>
+            <td>${resp.user_email || '-'}</td>
+            <td>${new Date(resp.submitted_at).toLocaleString()}</td>
+            <td>
+              <button onclick="viewResponse(${resp.response_id})">Pogledaj odgovore</button>
+              <button onclick="exportResponse(${resp.response_id})">Izvezi u XLSX</button>
+            </td>
+          `;
+          table.appendChild(row);
+        });
+
+        container.appendChild(table);
+      });
+    }
+
+    function viewResponse(responseId) {
+      window.location.href = `view_response.html?id=${responseId}`;
+    }
+
+    function exportResponse(responseId) {
+      fetch(`http://localhost:3002/form/${responseId}/export`, {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Greška pri preuzimanju XLSX fajla');
+        return res.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rezultati_forme_${responseId}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      })
+      .catch(err => console.error(err));
+    }
+  </script>
+</body>
+</html>

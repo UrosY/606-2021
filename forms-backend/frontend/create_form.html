@@ -17,12 +17,15 @@
 <input type="text" id="formTitle"><br><br>
 
 <label>Opis:</label>
-<textarea id="formDesc"></textarea><br><br>
 
+<textarea id="formDesc"></textarea><br><br>
+<label><input type="checkbox" id="allowGuests"> Dozvoli popunjavanje neprijavljenima</label><br><br>
 <h2>Pitanja</h2>
 <div id="questions"></div>
 <button onclick="addQuestion()">➕ Dodaj pitanje</button><br><br>
-<button onclick="saveForm()">💾 Sačuvaj formu</button>
+<button onclick="saveForm()">💾 Sačuvaj formu</button><br><br>
+<button onclick="window.location.href='forms.html'">⬅️ Nazad na forme</button>
+
 
 <script>
 let questionCount = 0;
@@ -62,7 +65,7 @@ function addQuestion(data = {}) {
 
   qContainer.appendChild(qDiv);
 
-  
+
   const optionsDiv = qDiv.querySelector('.options');
   options.forEach(optText => {
     const opt = document.createElement('input');
@@ -122,11 +125,12 @@ function cloneQuestion(btn) {
   addQuestion({ text, type, required, options });
 }
 
-// Sačuvaj formu
+
 async function saveForm() {
   const token = localStorage.getItem('token');
   const formTitle = document.getElementById('formTitle').value.trim();
   const formDesc = document.getElementById('formDesc').value.trim();
+  const allowGuests = document.getElementById('allowGuests').checked;
 
   const questions = [];
   qContainer.querySelectorAll('.question').forEach(q => {
@@ -141,11 +145,12 @@ async function saveForm() {
   const res = await fetch('http://localhost:3002/create-form', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ title: formTitle, description: formDesc, allowGuests: false, questions })
+    body: JSON.stringify({ title: formTitle, description: formDesc, allowGuests, questions })
   });
 
   const data = await res.json();
-  if (data.success) alert('Forma je uspešno kreirana!');
+  if (data.success){ alert('Forma je uspešno kreirana!');
+  window.location.href = "forms.html";}
   else alert('Greška: ' + (data.message || JSON.stringify(data)));
 }
 </script>
