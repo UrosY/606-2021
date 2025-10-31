@@ -37,7 +37,7 @@
   <button class="back-button" onclick="window.history.back()">Nazad</button>
 
   <script>
-    const token = localStorage.getItem('token'); // JWT token
+    const token = localStorage.getItem('token'); 
     let forms = [];
     let groupedData = null;
 
@@ -84,25 +84,47 @@
     }
 
     function showAnswers() {
-      const questionId = document.getElementById('questionSelect').value;
-      const tbody = document.getElementById('answersTable').querySelector('tbody');
-      tbody.innerHTML = '';
+  const questionId = document.getElementById('questionSelect').value;
+  const tbody = document.getElementById('answersTable').querySelector('tbody');
+  tbody.innerHTML = '';
 
-      if (!groupedData) return;
-      const question = groupedData.questions.find(q => q.id == questionId);
-      if (!question) return;
+  if (!groupedData) return;
+  const question = groupedData.questions.find(q => q.id == questionId);
+  if (!question) return;
 
-      question.answers.forEach(a => {
-        const answerText = a.selectedOptionTexts ? a.selectedOptionTexts.join(', ') : a.answer_text || '-';
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${a.user_name || 'Anoniman'}</td>
-          <td>${a.user_email || '-'}</td>
-          <td>${answerText}</td>
-        `;
-        tbody.appendChild(row);
-      });
+  question.answers.forEach(a => {
+    let answerHTML = '-';
+
+    
+    if (a.selectedOptionTexts && a.selectedOptionTexts.length > 0) {
+      answerHTML = a.selectedOptionTexts.join(', ');
     }
+    
+    else if (a.answer_text) {
+      if (question.type === 'date') {
+        answerHTML = new Date(a.answer_text).toLocaleDateString();
+      } else if (question.type === 'time') {
+        answerHTML = a.answer_text;
+      } else {
+        answerHTML = a.answer_text;
+      }
+    }
+
+    
+    if (a.imageBase64) {
+      answerHTML += `<br><img src="${a.imageBase64}" style="max-width:100px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">`;
+    }
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${a.user_name || 'Anoniman'}</td>
+      <td>${a.user_email || '-'}</td>
+      <td>${answerHTML}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
 
     document.getElementById('formSelect').addEventListener('change', onFormChange);
     document.getElementById('questionSelect').addEventListener('change', showAnswers);

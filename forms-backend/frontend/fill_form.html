@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Popuni formu</title>
+  <style>
+    .question-block { margin-bottom: 20px; }
+    .question-image { max-width: 200px; display: block; margin-top: 5px; border-radius: 5px; }
+  </style>
 </head>
 <body>
   <h1 id="formTitle">Učitavanje...</h1>
@@ -20,10 +24,7 @@
 
     async function loadForm() {
       const id = getParam('id');
-      if (!id) {
-        alert('ID forme nije prosleđen.');
-        return;
-      }
+      if (!id) { alert('ID forme nije prosleđen.'); return; }
 
       try {
         const res = await fetch('http://localhost:3002/form/' + id, {
@@ -48,11 +49,20 @@
           div.className = 'question-block';
           div.dataset.qid = q.id;
           div.dataset.qtype = q.type;
+          div.dataset.required = q.is_required ? 'true' : 'false';
 
           const label = document.createElement('label');
           label.innerHTML = `<strong>${q.text}</strong> ${q.is_required ? '<span style="color:red">*</span>' : ''}`;
           div.appendChild(label);
           div.appendChild(document.createElement('br'));
+
+          
+          if (q.imageBase64) {
+  const img = document.createElement('img');
+  img.src = q.imageBase64; 
+  img.className = 'question-image';
+  div.appendChild(img);
+}
 
           
           if (q.type === 'short_text') {
@@ -64,18 +74,6 @@
             const ta = document.createElement('textarea');
             ta.dataset.type = 'long_text';
             div.appendChild(ta);
-          } else if (q.type === 'single_choice') {
-            q.options.forEach(opt => {
-              const r = document.createElement('div');
-              r.innerHTML = `<label><input type="radio" name="q_${q.id}" value="${opt.id}"> ${opt.text}</label>`;
-              div.appendChild(r);
-            });
-          } else if (q.type === 'multiple_choice') {
-            q.options.forEach(opt => {
-              const c = document.createElement('div');
-              c.innerHTML = `<label><input type="checkbox" name="q_${q.id}" value="${opt.id}"> ${opt.text}</label>`;
-              div.appendChild(c);
-            });
           } else if (q.type === 'numeric') {
             const inp = document.createElement('input');
             inp.type = 'number';
@@ -89,7 +87,28 @@
             const inp = document.createElement('input');
             inp.type = 'time';
             div.appendChild(inp);
+          } else if (q.type === 'single_choice') {
+            q.options.forEach(opt => {
+              const r = document.createElement('div');
+              r.innerHTML = `<label><input type="radio" name="q_${q.id}" value="${opt.id}"> ${opt.text}</label>`;
+              div.appendChild(r);
+            });
+          } else if (q.type === 'multiple_choice') {
+            q.options.forEach(opt => {
+              const c = document.createElement('div');
+              c.innerHTML = `<label><input type="checkbox" name="q_${q.id}" value="${opt.id}"> ${opt.text}</label>`;
+              div.appendChild(c);
+            });
           }
+
+          
+          const fileInp = document.createElement('input');
+          fileInp.type = 'file';
+          fileInp.accept = 'image/*';
+          fileInp.dataset.type = 'image';
+          fileInp.style.marginTop = '8px';
+          div.appendChild(document.createElement('br'));
+          div.appendChild(fileInp);
 
           qContainer.appendChild(div);
           qContainer.appendChild(document.createElement('hr'));
@@ -103,37 +122,51 @@
 
     async function submitAnswers() {
       const id = getParam('id');
-      if (!id) return alert('ID missing');
+      if (!id) return alert('ID forme nije prosleđen.');
 
       const blocks = document.querySelectorAll('.question-block');
+      const formData = new FormData();
       const answers = [];
 
       for (let b of blocks) {
         const qid = parseInt(b.dataset.qid);
         const qtype = b.dataset.qtype;
+        const required = b.dataset.required === 'true';
+        let value = null;
+        let selectedOptionId = null;
+        let selectedOptionIds = [];
 
-        if (qtype === 'short_text' || qtype === 'long_text' || qtype === 'numeric' || qtype === 'date' || qtype === 'time') {
-          const input = b.querySelector('input, textarea');
-          const val = input ? input.value : null;
-          answers.push({ questionId: qid, type: qtype, value: val });
+        if (['short_text','long_text','numeric','date','time'].includes(qtype)) {
+          const input = b.querySelector('input[type=text], textarea, input[type=number], input[type=date], input[type=time]');
+          value = input ? input.value.trim() : '';
+          if (required && !value) { alert('Popunite sva obavezna polja'); return; }
         } else if (qtype === 'single_choice') {
-          const sel = b.querySelector('input[type="radio"]:checked');
-          const selectedOptionId = sel ? parseInt(sel.value) : null;
-          answers.push({ questionId: qid, type: qtype, selectedOptionId });
+          const sel = b.querySelector('input[type=radio]:checked');
+          selectedOptionId = sel ? parseInt(sel.value) : null;
+          if (required && selectedOptionId === null) { alert('Popunite sva obavezna polja'); return; }
         } else if (qtype === 'multiple_choice') {
-          const checked = Array.from(b.querySelectorAll('input[type="checkbox"]:checked')).map(i => parseInt(i.value));
-          answers.push({ questionId: qid, type: qtype, selectedOptionIds: checked });
+          selectedOptionIds = Array.from(b.querySelectorAll('input[type=checkbox]:checked')).map(i => parseInt(i.value));
+          if (required && selectedOptionIds.length === 0) { alert('Popunite sva obavezna polja'); return; }
         }
+
+        
+        const fileInput = b.querySelector('input[type=file]');
+        if (fileInput && fileInput.files.length) {
+          formData.append('answerImages', fileInput.files[0]);
+        } else {
+          formData.append('answerImages', '');
+        }
+
+        answers.push({ questionId: qid, type: qtype, value, selectedOptionId, selectedOptionIds });
       }
+
+      formData.append('data', JSON.stringify({ answers }));
 
       try {
         const res = await fetch(`http://localhost:3002/form/${id}/submit`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({ answers })
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+          body: formData
         });
 
         const data = await res.json();

@@ -48,7 +48,7 @@
         data.forEach(form => {
           const li = document.createElement('li');
 
-          // link za popunjavanje forme
+          
           const fillLink = document.createElement('a');
           fillLink.href = `fill_form.html?id=${form.id}`;
           fillLink.textContent = form.title;
@@ -78,7 +78,7 @@
           deleteBtn.onclick = () => deleteForm(form.id);
           li.appendChild(deleteBtn);
 
-         
+          
           const resultsBtn = document.createElement('button');
           resultsBtn.textContent = "Rezultati";
           resultsBtn.onclick = () => viewResults(form.id);

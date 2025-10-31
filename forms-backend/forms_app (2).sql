@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Oct 17, 2025 at 09:06 PM
+-- Generation Time: Oct 15, 2025 at 06:06 PM
 -- Server version: 8.0.31
 -- PHP Version: 8.0.26
 
@@ -89,15 +89,7 @@ CREATE TABLE IF NOT EXISTS `forms` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `owner_id` (`owner_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `forms`
---
-
-INSERT INTO `forms` (`id`, `title`, `description`, `allow_anonymous`, `is_locked`, `owner_id`, `created_at`) VALUES
-(46, 'forna1', '2121', 0, 0, 4, '2025-10-15 18:35:52'),
-(45, 'forma1', 'asdasd', 0, 0, 4, '2025-10-15 18:21:11');
+) ENGINE=MyISAM AUTO_INCREMENT=45 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -129,11 +121,11 @@ CREATE TABLE IF NOT EXISTS `questions` (
   `type` enum('short_text','long_text','single_choice','multiple_choice','numeric','date','time','numeric','date','time') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `is_required` tinyint(1) DEFAULT '0',
   `position` int NOT NULL,
-  `image_url` varchar(255) DEFAULT NULL,
+  `image` longblob,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `form_id` (`form_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=48 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -167,14 +159,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
---
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`) VALUES
-(4, '123', '123', '$2b$10$MGeBADvJxOc9Pcmzi.u.G.ep9v7wbwxofIWXG830mfk5fAkGKd9Iy', '2025-10-15 18:17:30');
+) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

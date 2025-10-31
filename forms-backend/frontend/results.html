@@ -44,7 +44,7 @@
         if (!res.ok) throw new Error('Greška pri učitavanju rezultata');
 
         const data = await res.json();
-      
+        
         const form = data.find(f => f.form_id == formId);
         if (!form) {
           document.getElementById('results').innerHTML = '<p>Forma nema rezultate ili ne postoji.</p>';

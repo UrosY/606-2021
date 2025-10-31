@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <title>Kreiraj formu</title>
 <style>
+  body{font-family:sans-serif;}
   .question { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; position: relative; }
   .move-btn, .remove-btn, .clone-btn { cursor: pointer; font-weight: bold; margin-left: 5px; }
   .remove-btn { color: red; }
+  .options input{display:block;margin:2px 0;}
+  button{margin:2px;}
 </style>
 </head>
 <body>
@@ -17,30 +20,28 @@
 <input type="text" id="formTitle"><br><br>
 
 <label>Opis:</label>
-
 <textarea id="formDesc"></textarea><br><br>
+
 <label><input type="checkbox" id="allowGuests"> Dozvoli popunjavanje neprijavljenima</label><br><br>
+
 <h2>Pitanja</h2>
 <div id="questions"></div>
 <button onclick="addQuestion()">➕ Dodaj pitanje</button><br><br>
 <button onclick="saveForm()">💾 Sačuvaj formu</button><br><br>
-<button onclick="window.location.href='forms.html'">⬅️ Nazad na forme</button>
-
 
 <script>
 let questionCount = 0;
 const qContainer = document.getElementById('questions');
 
-function addQuestion(data = {}) {
+function addQuestion(data={}) {
   questionCount++;
   const qDiv = document.createElement('div');
   qDiv.className = "question";
-  qDiv.dataset.id = '';
 
   const text = data.text || '';
   const type = data.type || 'short_text';
   const required = data.required || false;
-  const options = Array.isArray(data.options) ? data.options : [];
+  const options = data.options || [];
 
   qDiv.innerHTML = `
     <div>
@@ -60,12 +61,12 @@ function addQuestion(data = {}) {
     </select>
     <div class="options" style="display:${type==='single_choice'||type==='multiple_choice'?'block':'none'};"></div>
     <button type="button" onclick="addOption(this)">➕ Dodaj opciju</button><br>
+    <label>Dodaj sliku: <input type="file" class="qImage" accept="image/*"></label><br>
     <label><input type="checkbox" class="qRequired" ${required?'checked':''}> Obavezno</label>
   `;
-
   qContainer.appendChild(qDiv);
 
-
+  
   const optionsDiv = qDiv.querySelector('.options');
   options.forEach(optText => {
     const opt = document.createElement('input');
@@ -77,13 +78,11 @@ function addQuestion(data = {}) {
   });
 }
 
-
 function toggleOptions(select) {
   const optionsDiv = select.parentNode.querySelector('.options');
-  if (select.value === 'single_choice' || select.value === 'multiple_choice') optionsDiv.style.display = 'block';
-  else { optionsDiv.innerHTML = ''; optionsDiv.style.display = 'none'; }
+  if (select.value==='single_choice'||select.value==='multiple_choice') optionsDiv.style.display='block';
+  else { optionsDiv.innerHTML=''; optionsDiv.style.display='none'; }
 }
-
 
 function addOption(btn) {
   const optionsDiv = btn.parentNode.querySelector('.options');
@@ -94,37 +93,17 @@ function addOption(btn) {
   optionsDiv.appendChild(document.createElement('br'));
 }
 
-
-function moveUp(btn) {
-  const qDiv = btn.closest('.question');
-  const prev = qDiv.previousElementSibling;
-  if (prev) qContainer.insertBefore(qDiv, prev);
+function moveUp(btn){ const qDiv=btn.closest('.question'); const prev=qDiv.previousElementSibling; if(prev) qContainer.insertBefore(qDiv, prev);}
+function moveDown(btn){ const qDiv=btn.closest('.question'); const next=qDiv.nextElementSibling; if(next) qContainer.insertBefore(next, qDiv);}
+function removeQuestion(btn){ qContainer.removeChild(btn.closest('.question'));}
+function cloneQuestion(btn){
+  const qDiv=btn.closest('.question');
+  const text=qDiv.querySelector('.qText').value;
+  const type=qDiv.querySelector('.qType').value;
+  const required=qDiv.querySelector('.qRequired').checked;
+  const options=Array.from(qDiv.querySelectorAll('.options input')).map(opt=>opt.value);
+  addQuestion({text,type,required,options});
 }
-
-
-function moveDown(btn) {
-  const qDiv = btn.closest('.question');
-  const next = qDiv.nextElementSibling;
-  if (next) qContainer.insertBefore(next, qDiv);
-}
-
-
-function removeQuestion(btn) {
-  const qDiv = btn.closest('.question');
-  qContainer.removeChild(qDiv);
-}
-
-
-function cloneQuestion(btn) {
-  const qDiv = btn.closest('.question');
-  const text = qDiv.querySelector('.qText').value;
-  const type = qDiv.querySelector('.qType').value;
-  const required = qDiv.querySelector('.qRequired').checked;
-  const options = [];
-  qDiv.querySelectorAll('.options input').forEach(opt => { if (opt.value.trim() !== '') options.push(opt.value.trim()); });
-  addQuestion({ text, type, required, options });
-}
-
 
 async function saveForm() {
   const token = localStorage.getItem('token');
@@ -133,25 +112,30 @@ async function saveForm() {
   const allowGuests = document.getElementById('allowGuests').checked;
 
   const questions = [];
-  qContainer.querySelectorAll('.question').forEach(q => {
-    const text = q.querySelector('.qText').value.trim();
-    const type = q.querySelector('.qType').value;
-    const required = q.querySelector('.qRequired').checked;
-    let options = [];
-    q.querySelectorAll('.options input').forEach(opt => { if (opt.value.trim() !== '') options.push(opt.value.trim()); });
-    if (text !== '') questions.push({ text, type, required, options });
+  const images = [];
+
+  qContainer.querySelectorAll('.question').forEach(q=>{
+    const text=q.querySelector('.qText').value.trim();
+    const type=q.querySelector('.qType').value;
+    const required=q.querySelector('.qRequired').checked;
+    const options=Array.from(q.querySelectorAll('.options input')).map(opt=>opt.value).filter(v=>v!=='');
+    const imageInput = q.querySelector('.qImage');
+    questions.push({text,type,required,options});
+    images.push(imageInput.files[0] || null);
   });
+
+  const formData = new FormData();
+  formData.append('data', JSON.stringify({ title: formTitle, description: formDesc, allowGuests, questions }));
+  images.forEach(img => { if(img) formData.append('images', img); });
 
   const res = await fetch('http://localhost:3002/create-form', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({ title: formTitle, description: formDesc, allowGuests, questions })
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+token },
+    body: formData
   });
-
   const data = await res.json();
-  if (data.success){ alert('Forma je uspešno kreirana!');
-  window.location.href = "forms.html";}
-  else alert('Greška: ' + (data.message || JSON.stringify(data)));
+  if(data.success){ alert('Forma je uspešno kreirana!'); window.location.href='forms.html'; }
+  else alert('Greška: '+(data.message||JSON.stringify(data)));
 }
 </script>
 

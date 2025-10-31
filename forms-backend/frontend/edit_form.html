@@ -5,9 +5,10 @@
 <title>Izmeni formu</title>
 <style>
   body{font-family:sans-serif;}
-  .question{border:1px solid #ccc;padding:10px;margin:10px 0;}
+  .question{border:1px solid #ccc;padding:10px;margin:10px 0;position:relative;}
   .options input{display:block;margin:2px 0;}
   button{margin:2px;}
+  .img-preview{max-width:100px; display:block; margin:5px 0;}
 </style>
 </head>
 <body>
@@ -22,10 +23,7 @@
 
 <script>
 const token = localStorage.getItem('token');
-if (!token) {
-  alert('Morate biti prijavljeni!');
-  window.location.href = 'index.html';
-}
+if (!token) { alert('Morate biti prijavljeni!'); window.location.href = 'index.html'; }
 
 function getParam(name){ return new URLSearchParams(location.search).get(name); }
 const formId = getParam('id');
@@ -44,19 +42,26 @@ async function loadForm() {
   } catch(err) { console.error(err); alert('Greška pri učitavanju forme'); }
 }
 
-
 function addQuestion(existing=null){
   const qDiv=document.createElement('div'); qDiv.className='question';
   const qText = existing ? existing.text : '';
   const qId = existing ? existing.id : null;
+  const qType = existing ? existing.type : 'short_text';
+  const required = existing ? existing.is_required : false;
+
   qDiv.dataset.qid = qId;
   qDiv.innerHTML=`
-    <input type="text" class="qText" placeholder="Tekst pitanja" value="${qText}">
+    <input type="text" class="qText" placeholder="Tekst pitanja" value="${qText}"><br>
+    <label>Slika: <input type="file" class="qImage" accept="image/*"></label>
+    ${existing && existing.image_url ? `<img src="${existing.image_url}" class="img-preview">` : ''}
     <select class="qType" onchange="toggleOptions(this)">
       <option value="short_text">Kratak tekst</option>
       <option value="long_text">Dug tekst</option>
       <option value="single_choice">Jedan izbor</option>
       <option value="multiple_choice">Više izbora</option>
+      <option value="numeric">Broj</option>
+      <option value="date">Datum</option>
+      <option value="time">Vreme</option>
     </select>
     <div class="options" style="display:none;"></div>
     <button type="button" onclick="addOption(this)">➕ Opcija</button>
@@ -64,9 +69,9 @@ function addQuestion(existing=null){
     <button type="button" onclick="moveUp(this)">⬆️</button>
     <button type="button" onclick="moveDown(this)">⬇️</button>
     <button type="button" onclick="cloneQuestion(this)">📄 Kloniraj</button>
-    <label><input type="checkbox" class="qRequired"> Obavezno</label>
+    <label><input type="checkbox" class="qRequired" ${required?'checked':''}> Obavezno</label>
   `;
-  const sel=qDiv.querySelector('.qType'); if(existing) sel.value = existing.type;
+  const sel=qDiv.querySelector('.qType'); sel.value = qType;
   toggleOptions(sel);
   if(existing && existing.options) existing.options.forEach(opt => addOptionToDiv(qDiv, opt.text, opt.id));
   document.getElementById('questions').appendChild(qDiv);
@@ -87,7 +92,7 @@ function addOptionToDiv(div, val='', id=null){
 
 function removeQuestion(btn){ btn.parentNode.remove(); }
 function moveUp(btn){ const div=btn.parentNode; const prev=div.previousElementSibling; if(prev){div.parentNode.insertBefore(div,prev);} }
-function moveDown(btn){ const div=btn.parentNode; const next=div.nextElementSibling; if(next){div.parentNode.insertBefore(div.nextElementSibling,div);} }
+function moveDown(btn){ const div=btn.parentNode; const next=div.nextElementSibling; if(next){div.parentNode.insertBefore(next,div);} }
 function cloneQuestion(btn){
   const div=btn.parentNode;
   addQuestion({
@@ -100,8 +105,11 @@ function cloneQuestion(btn){
 
 async function saveChanges(){
   try {
-    const questionsPayload = Array.from(document.querySelectorAll('.question')).map(q=>{
+    const formData = new FormData();
+    const questionsPayload = Array.from(document.querySelectorAll('.question')).map((q,i)=>{
       const qId = q.dataset.qid ? parseInt(q.dataset.qid) : undefined;
+      const imgInput = q.querySelector('.qImage');
+      if(imgInput && imgInput.files[0]) formData.append('images', imgInput.files[0]);
       return {
         id: qId,
         text: q.querySelector('.qText').value.trim(),
@@ -110,23 +118,22 @@ async function saveChanges(){
         options: Array.from(q.querySelectorAll('.options input')).map(opt=>({text:opt.value.trim(), id:opt.dataset.id?parseInt(opt.dataset.id):undefined}))
       };
     });
-    
-    const payload = {
+    formData.append('data', JSON.stringify({
       title: document.getElementById('formTitle').value.trim(),
       description: document.getElementById('formDesc').value.trim(),
       questions: questionsPayload
-    };
+    }));
 
     const res = await fetch(`http://localhost:3002/edit-form/${formId}`, {
       method: 'PUT',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
-      body: JSON.stringify(payload)
+      headers: { 'Authorization':'Bearer '+token },
+      body: formData
     });
 
     const data = await res.json();
     if(res.ok){
       alert(data.message || 'Forma uspešno izmenjena!');
-      window.location.href = 'forms.html'; // **redirect na listu formi**
+      window.location.href = 'forms.html';
     } else alert('Greška pri čuvanju: '+(data.error||JSON.stringify(data)));
 
   } catch(err){

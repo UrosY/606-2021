@@ -31,31 +31,43 @@
     }
 
     function renderResponse(data) {
-      document.getElementById('formTitle').textContent = data.response.form_title;
-      document.getElementById('submittedAt').textContent = 'Poslato: ' + new Date(data.response.submitted_at).toLocaleString();
+  document.getElementById('formTitle').textContent = data.response.form_title;
+  document.getElementById('submittedAt').textContent = 'Poslato: ' + new Date(data.response.submitted_at).toLocaleString();
 
-      const container = document.getElementById('questions');
-      container.innerHTML = '';
+  const container = document.getElementById('questions');
+  container.innerHTML = '';
 
-      data.questions.forEach(q => {
-        const div = document.createElement('div');
-        div.className = 'question';
-        let answerText = '';
+  data.questions.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'question';
+    let answerText = '-';
 
-        if (q.type === 'single_choice') {
-          const selected = q.options.find(o => o.id == q.answer);
-          answerText = selected ? selected.text : '-';
-        } else if (q.type === 'multiple_choice') {
-          const selected = q.options.filter(o => q.answer.includes(o.id)).map(o => o.text);
-          answerText = selected.length ? selected.join(', ') : '-';
-        } else {
-          answerText = q.answer || '-';
-        }
-
-        div.innerHTML = `<h3>${q.text}</h3><p class="answer">${answerText}</p>`;
-        container.appendChild(div);
-      });
+    if (q.type === 'single_choice') {
+      const selected = q.options.find(o => o.id == q.answer);
+      answerText = selected ? selected.text : '-';
+    } else if (q.type === 'multiple_choice') {
+      const selected = q.options.filter(o => q.answer && q.answer.includes(o.id)).map(o => o.text);
+      answerText = selected.length ? selected.join(', ') : '-';
+    } else if (q.type === 'numeric') {
+      answerText = q.answer !== null ? q.answer : '-';
+    } else if (q.type === 'date') {
+      answerText = q.answer ? new Date(q.answer).toLocaleDateString() : '-';
+    } else if (q.type === 'time') {
+      answerText = q.answer || '-';
+    } else {
+      answerText = q.answer || '-';
     }
+
+    let imgHTML = '';
+    if (q.imageBase64) {
+      imgHTML = `<br><img src="${q.imageBase64}" style="max-width:200px; margin-top:8px; border:1px solid #ccc; border-radius:6px;">`;
+    }
+
+    div.innerHTML = `<h3>${q.text}</h3><p class="answer">${answerText}${imgHTML}</p>`;
+    
+    container.appendChild(div);
+  });
+}
 
     function goBack() {
       window.history.back();

@@ -12,12 +12,12 @@ app.use(bodyParser.json());
 
 const SECRET = 'tajna_lozinka'; 
 
-// 📌 Test ruta
+
 app.get('/', (req, res) => {
   res.send('Auth service is running!');
 });
 
-// 📌 Registracija
+//  Registracija
 app.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -42,7 +42,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// 📌 Login
+//  Login
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
