@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <title>Popuni formu</title>
+</head>
+<body>
+  <h1 id="formTitle"></h1>
+  <p id="formDesc"></p>
+
+  <form id="responseForm"></form>
+  <button type="button" onclick="submitResponse()">Pošalji</button>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = 'index.html';
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const formId = params.get('id');
+
+    async function loadForm() {
+      const res = await fetch(`http://localhost:3002/forms/${formId}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const form = await res.json();
+
+      document.getElementById('formTitle').innerText = form.title;
+      document.getElementById('formDesc').innerText = form.description;
+
+      const formDiv = document.getElementById('responseForm');
+
+      form.questions.forEach(q => {
+        const div = document.createElement('div');
+        div.innerHTML = `<p>${q.text}</p>`;
+
+        switch (q.type) {
+          case 'short_text':
+            div.innerHTML += `<input type="text" name="q_${q.id}">`;
+            break;
+          case 'long_text':
+            div.innerHTML += `<textarea name="q_${q.id}"></textarea>`;
+            break;
+          case 'single_choice':
+            q.options.forEach(o => {
+              div.innerHTML += `
+                <label>
+                  <input type="radio" name="q_${q.id}" value="${o.id}"> ${o.text}
+                </label><br>`;
+            });
+            break;
+          case 'multiple_choice':
+            q.options.forEach(o => {
+              div.innerHTML += `
+                <label>
+                  <input type="checkbox" name="q_${q.id}" value="${o.id}"> ${o.text}
+                </label><br>`;
+            });
+            break;
+          case 'numeric':
+            div.innerHTML += `<input type="number" name="q_${q.id}">`;
+            break;
+          case 'date':
+            div.innerHTML += `<input type="date" name="q_${q.id}">`;
+            break;
+          case 'time':
+            div.innerHTML += `<input type="time" name="q_${q.id}">`;
+            break;
+        }
+
+        formDiv.appendChild(div);
+      });
+    }
+
+    async function submitResponse() {
+      const formEl = document.getElementById('responseForm');
+      const formData = new FormData(formEl);
+
+      const answers = [];
+
+      const processedCheckboxes = new Set();
+
+      for (let [key, value] of formData.entries()) {
+        const questionId = key.split('_')[1];
+
+        
+        if (processedCheckboxes.has(key)) continue;
+
+        const el = formEl.querySelectorAll(`input[name="q_${questionId}"]`);
+        if (el[0] && el[0].type === 'checkbox') {
+          
+          const checked = Array.from(el).filter(c => c.checked).map(c => c.value);
+          if (checked.length > 0) {
+            answers.push({ questionId, options: checked });
+          }
+          el.forEach(c => processedCheckboxes.add(c.name));
+        } else {
+          answers.push({ questionId, answer: value });
+        }
+      }
+
+      
+      const res = await fetch(`http://localhost:3002/forms/${formId}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ answers })
+      });
+
+      const data = await res.json();
+      if (data.message) {
+        
+        window.location.href = 'forms.html';
+      } else {
+        console.error(data);
+      }
+    }
+
+    loadForm();
+  </script>
+</body>
+</html>
