@@ -68,5 +68,5 @@ app.post('/login', async (req, res) => {
   }
 });
 
-
+module.exports = app;
 app.listen(3001, () => console.log('Auth service running on port 3001'));
